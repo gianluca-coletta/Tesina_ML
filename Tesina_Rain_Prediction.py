@@ -1,14 +1,219 @@
 import numpy as np
 import pandas as pd
-import matplotlib as plt
+import matplotlib.pyplot as plt
 import seaborn as sns
 
-
+# Load weatherAUS dataframe
 rain = pd.read_csv("weatherAUS.csv")
 
-print(rain.head())
-print(rain.info())
-print(rain.describe())
+# Dimension of dataset
+print(rain.shape)
 
-NaN_label = rain['RainTomorrow'].isnull().sum()
-print("Number of labels with a NaN value = " + str(NaN_label))
+# Summary of dataset
+print(rain.info())
+
+# Summary statistics
+print(rain.describe().to_string())
+
+# Categorical feature
+categorical_features = [column_name for column_name in rain.columns if rain[column_name].dtype == 'O']
+print("Number of Categorical Features: {}".format(len(categorical_features)))
+print("Categorical Features: ", categorical_features)
+
+# Unique value for categorical features (Check cardinality)
+for each_feature in categorical_features:
+    unique_values = len(rain[each_feature].unique())
+    print("Cardinality(no. of unique values) of {} are: {}".format(each_feature, unique_values))
+
+# Feature engineering of date column
+rain['Date'] = pd.to_datetime(rain['Date'])
+rain['year'] = rain['Date'].dt.year
+rain['month'] = rain['Date'].dt.month
+rain['day'] = rain['Date'].dt.day
+
+
+
+# Drop column date
+rain.drop('Date', axis=1, inplace=True)
+print(rain.head().to_string())
+
+# Missing values for categorical features
+categorical_features = [column_name for column_name in rain.columns if rain[column_name].dtype == 'O']
+print(rain[categorical_features].isnull().sum())
+
+# Drop missing values
+rain = rain.dropna(subset=categorical_features)
+print(rain[categorical_features].isnull().sum())
+
+# Dimension of dataset after remove missing values of categorical features
+print(rain.shape)
+
+# Encoding categorical variables to numeric ones (non la miglior scelta, meglio dummies)
+from sklearn.preprocessing import LabelEncoder
+
+for c in rain.columns:
+    if rain[c].dtype == 'object':
+        lbl = LabelEncoder()
+        lbl.fit(list(rain[c].values))
+        rain[c] = lbl.transform(rain[c].values)
+print(rain.head().to_string())
+
+# Numerical variables
+
+# Missing values for numerical features
+numerical_features = [column_name for column_name in rain.columns if rain[column_name].dtype == 'float64']
+print(rain[numerical_features].isnull().sum())
+
+# Impute missing values with respective column median
+for col in numerical_features:
+    col_median = rain[col].median()
+    rain[col].fillna(col_median, inplace=True)
+print(rain[numerical_features].isnull().sum())
+
+# Summary statistics of numerical feature to find possible outliers
+print(round(rain[numerical_features].describe()).to_string(), 2)
+
+# BoxPlot numerical features
+plt.figure(1, figsize=[18, 16])
+rain.boxplot(column=numerical_features)
+plt.xticks(rotation=45)
+
+# BoxPlot numerical features without
+plt.figure(4, figsize=[18, 16])
+rain.boxplot(column=['MinTemp', 'MaxTemp', 'Rainfall', 'Evaporation', 'Sunshine',
+                     'WindGustSpeed', 'WindSpeed9am', 'WindSpeed3pm', 'Humidity9am',
+                     'Humidity3pm', 'Cloud9am', 'Cloud3pm', 'Temp9am', 'Temp3pm'])
+plt.xticks(rotation=45)
+
+# BoxPlot rainfall
+plt.figure(5)
+rain.boxplot(column='Rainfall')
+plt.xticks(rotation=45)
+
+# Remove outlier
+rain = rain.drop(rain[rain.Rainfall > 367].index)
+numerical_features = [column_name for column_name in rain.columns if rain[column_name].dtype == 'float64']
+
+# Correlation matrix
+plt.figure(figsize=(18,16))
+sns.heatmap(rain.corr(), annot=True, cmap=plt.cm.CMRmap_r)
+plt.show()
+
+#
+plt.figure(10)
+sns.countplot(x=rain.month, hue=rain.RainTomorrow, data = rain)
+plt.show()
+
+# Remove correlated features
+rain.drop(['Temp9am','Temp3pm','Pressure3pm'],inplace= True,axis=1)
+
+print(rain.columns)
+print(rain.head().to_string())
+print(rain.shape)
+
+# Show count of RainToday and RainTomorrow
+print(rain.RainToday.value_counts())
+print(rain.RainTomorrow.value_counts())
+
+fig, ax =plt.subplots(1,2)
+sns.countplot(data=rain,x='RainToday',ax=ax[0])
+sns.countplot(data=rain,x='RainTomorrow',ax=ax[1])
+plt.show()
+
+# Splitting dataset and re-scaling with standardization
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+
+x = rain.drop('RainTomorrow', axis=1).values
+t = rain['RainTomorrow']
+X_train, X_test, t_train, t_test = train_test_split(x, t, test_size = 0.20, random_state = 0)
+sc = StandardScaler()
+X_train = sc.fit_transform(X_train)
+X_test = sc.transform(X_test)
+
+# grid search logistic regression model on the sonar dataset
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import RepeatedStratifiedKFold
+from sklearn.model_selection import GridSearchCV
+
+# GRID SEARCH LOGISTIC REGRESSION
+
+# # define model
+# model = LogisticRegression()
+# # define evaluation
+# cv = RepeatedStratifiedKFold(n_splits=5, n_repeats=10, random_state=1)
+# # define search space
+# space = dict()
+# space['solver'] = ['lbfgs','newton-cg', 'sag', 'saga']
+# space['penalty'] = ['none',  'l2']
+# space['C'] = [1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1, 10, 100]
+# space['max_iter'] = [100, 1000, 2500, 5000]
+# # define search
+# search = GridSearchCV(model, space, scoring='accuracy', n_jobs=-1, cv=cv)
+# # execute search
+# result = search.fit(X_train, t_train)
+# # summarize result
+# print('Best Score: %s' % result.best_score_)
+# print('Best Hyperparameters: %s' % result.best_params_)
+
+# Best parameter -> c:10 max_iter_:5000 penalty: L2 solver: sag
+
+from sklearn.metrics import classification_report
+model = LogisticRegression(C=10, max_iter=5000, penalty='l2', solver='sag')
+model.fit(X_train, t_train)
+
+t_pred = model.predict(X_test)
+from sklearn.metrics import classification_report
+print(classification_report(t_test, t_pred))
+
+
+
+
+# GRID SEARCH NEURAL NETWORKS
+
+from sklearn.neural_network import MLPClassifier
+# mlp_gs = MLPClassifier()
+# parameter_space = {
+#     'hidden_layer_sizes': [(100, 100), (100, 100, 100)],
+#     'activation': ['tanh', 'relu'],
+#     'solver': ['sgd','adam'],
+#     'alpha': [0.0001, 0.001, 0.01, 0.1],
+#     'early_stopping': [True, False],
+#     'max_iter': [200]
+# }
+# from sklearn.model_selection import GridSearchCV
+# from sklearn.metrics import classification_report
+# clf = GridSearchCV(mlp_gs, parameter_space, n_jobs=-1, cv=3, scoring='f1', verbose=10, error_score="raise")
+# best_clf = clf.fit(X_train, t_train) # X is train samples and t is the corresponding labels
+#
+# # best score achieved during the GridSearchCV
+# print('GridSearch CV best score : {:.4f}\n\n'.format(clf.best_score_))
+#
+# # print parameters that give the best results
+# print('Parameters that give the best results :','\n\n', (clf.best_params_))
+#
+# # print estimator that was chosen by the GridSearch
+# print('\n\nEstimator that was chosen by the search :','\n\n', (clf.best_estimator_))
+
+#
+
+clf = MLPClassifier(alpha=0.001, hidden_layer_sizes=(100, 100), early_stopping=True).fit(X_train, t_train)
+t_pred=clf.predict(X_train)
+print(classification_report(t_train, t_pred))
+
+# Gridsearch metodo 2
+
+# param_grid = [
+#     {'penalty' : ['L1', 'l2', 'none'],
+#     'C' : [1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1, 10, 100],
+#     'solver' : ['lbfgs','newton-cg', 'sag', 'saga'],
+#     'max_iter' : [100, 1000,2500, 5000]
+#     }
+# ]
+# from sklearn.linear_model import LogisticRegression
+# from sklearn.model_selection import GridSearchCV
+# clf = GridSearchCV(LogisticRegression(multi_class = 'ovr'), param_grid = param_grid, verbose=10, n_jobs=-1, error_score="raise")
+# best_clf = clf.fit(X_train, t_train)
+# print(best_clf.best_estimator_)
+# print(best_clf.cv_results_)
+# print (f'Accuracy - : {best_clf.score(X_train, t_train):.3f}')
