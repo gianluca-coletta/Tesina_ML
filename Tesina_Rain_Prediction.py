@@ -78,30 +78,36 @@ plt.figure(1, figsize=[18, 16])
 rain.boxplot(column=numerical_features)
 plt.xticks(rotation=45)
 
-# BoxPlot numerical features without
-plt.figure(4, figsize=[18, 16])
+# BoxPlot numerical features without Pressure
+plt.figure(2, figsize=[18, 16])
 rain.boxplot(column=['MinTemp', 'MaxTemp', 'Rainfall', 'Evaporation', 'Sunshine',
                      'WindGustSpeed', 'WindSpeed9am', 'WindSpeed3pm', 'Humidity9am',
                      'Humidity3pm', 'Cloud9am', 'Cloud3pm', 'Temp9am', 'Temp3pm'])
 plt.xticks(rotation=45)
+plt.show()
 
 # BoxPlot rainfall
-plt.figure(5)
+plt.figure(3, figsize=[18, 16])
 rain.boxplot(column='Rainfall')
 plt.xticks(rotation=45)
+plt.show()
 
 # Remove outlier
 rain = rain.drop(rain[rain.Rainfall > 367].index)
 numerical_features = [column_name for column_name in rain.columns if rain[column_name].dtype == 'float64']
 
 # Correlation matrix
-plt.figure(figsize=(18,16))
+plt.figure(4, figsize=(18,16))
 sns.heatmap(rain.corr(), annot=True, cmap=plt.cm.CMRmap_r)
 plt.show()
 
-#
-plt.figure(10)
+# Count of RainTomorrow for month
+plt.figure(5, figsize=[18, 16])
 sns.countplot(x=rain.month, hue=rain.RainTomorrow, data = rain)
+
+# Count of RainToday for month
+plt.figure(6, figsize=[18, 16])
+sns.countplot(x=rain.month, hue=rain.RainToday, data = rain)
 plt.show()
 
 # Remove correlated features
@@ -140,8 +146,6 @@ from sklearn.model_selection import GridSearchCV
 
 # # define model
 # model = LogisticRegression()
-# # define evaluation
-# cv = RepeatedStratifiedKFold(n_splits=5, n_repeats=10, random_state=1)
 # # define search space
 # space = dict()
 # space['solver'] = ['lbfgs','newton-cg', 'sag', 'saga']
@@ -149,14 +153,14 @@ from sklearn.model_selection import GridSearchCV
 # space['C'] = [1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1, 10, 100]
 # space['max_iter'] = [100, 1000, 2500, 5000]
 # # define search
-# search = GridSearchCV(model, space, scoring='accuracy', n_jobs=-1, cv=cv)
+# search = GridSearchCV(model, space, scoring='accuracy', n_jobs=-1, cv=3)
 # # execute search
 # result = search.fit(X_train, t_train)
 # # summarize result
 # print('Best Score: %s' % result.best_score_)
 # print('Best Hyperparameters: %s' % result.best_params_)
 
-# Best parameter -> c:10 max_iter_:5000 penalty: L2 solver: sag
+# Best parameter -> c:10 max_iter_:5000 penalty: L2 solver: sag ||  F1-Score = 0.59
 
 from sklearn.metrics import classification_report
 model = LogisticRegression(C=10, max_iter=5000, penalty='l2', solver='sag')
@@ -166,8 +170,28 @@ t_pred = model.predict(X_test)
 from sklearn.metrics import classification_report
 print(classification_report(t_test, t_pred))
 
+# Confusion matrix
+from sklearn.metrics import confusion_matrix
 
+cm = confusion_matrix(t_test, t_pred)
 
+print('Confusion matrix\n\n', cm)
+
+print('\nTrue Positives(TP) = ', cm[0,0])
+
+print('\nTrue Negatives(TN) = ', cm[1,1])
+
+print('\nFalse Positives(FP) = ', cm[0,1])
+
+print('\nFalse Negatives(FN) = ', cm[1,0])
+
+# Visualize
+plt.figure(7, figsize=[18, 16])
+cm_matrix = pd.DataFrame(data=cm, columns=['Actual Positive:1', 'Actual Negative:0'],
+                                 index=['Predict Positive:1', 'Predict Negative:0'])
+
+sns.heatmap(cm_matrix, annot=True, fmt='d', cmap='YlGnBu')
+plt.show()
 
 # GRID SEARCH NEURAL NETWORKS
 
@@ -195,25 +219,33 @@ from sklearn.neural_network import MLPClassifier
 # # print estimator that was chosen by the GridSearch
 # print('\n\nEstimator that was chosen by the search :','\n\n', (clf.best_estimator_))
 
-#
 
-clf = MLPClassifier(alpha=0.001, hidden_layer_sizes=(100, 100), early_stopping=True).fit(X_train, t_train)
-t_pred=clf.predict(X_train)
-print(classification_report(t_train, t_pred))
+# Best parameter NN -> alpha = 0.001 hidden_layer_sizes = (100,100) early_stopping = true || F1-Score = 0.6377
 
-# Gridsearch metodo 2
+clf_NN = MLPClassifier(alpha=0.001, hidden_layer_sizes=(100, 100), early_stopping=True).fit(X_train, t_train)
+t_pred_NN=clf_NN.predict(X_test)
+print(classification_report(t_test, t_pred_NN))
 
-# param_grid = [
-#     {'penalty' : ['L1', 'l2', 'none'],
-#     'C' : [1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1, 10, 100],
-#     'solver' : ['lbfgs','newton-cg', 'sag', 'saga'],
-#     'max_iter' : [100, 1000,2500, 5000]
-#     }
-# ]
-# from sklearn.linear_model import LogisticRegression
-# from sklearn.model_selection import GridSearchCV
-# clf = GridSearchCV(LogisticRegression(multi_class = 'ovr'), param_grid = param_grid, verbose=10, n_jobs=-1, error_score="raise")
-# best_clf = clf.fit(X_train, t_train)
-# print(best_clf.best_estimator_)
-# print(best_clf.cv_results_)
-# print (f'Accuracy - : {best_clf.score(X_train, t_train):.3f}')
+# Confusion matrix
+
+from sklearn.metrics import confusion_matrix
+
+cm1 = confusion_matrix(t_test, t_pred_NN)
+
+print('Confusion matrix\n\n', cm1)
+
+print('\nTrue Positives(TP) = ', cm1[0,0])
+
+print('\nTrue Negatives(TN) = ', cm1[1,1])
+
+print('\nFalse Positives(FP) = ', cm1[0,1])
+
+print('\nFalse Negatives(FN) = ', cm1[1,0])
+
+# Visualize
+plt.figure(6, figsize=[18, 16])
+cm1_matrix = pd.DataFrame(data=cm1, columns=['Actual Positive:1', 'Actual Negative:0'],
+                                 index=['Predict Positive:1', 'Predict Negative:0'])
+
+sns.heatmap(cm1_matrix, annot=True, fmt='d', cmap='YlGnBu')
+plt.show()
