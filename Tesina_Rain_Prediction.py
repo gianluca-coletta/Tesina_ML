@@ -154,7 +154,6 @@ plt.show()
 rain.drop(['Temp9am', 'Temp3pm', 'Pressure3pm'], inplace=True, axis=1)
 
 # Remove useless features
-rain.drop(['Location', 'year', 'month', 'day'], inplace=True, axis=1)
 
 print(rain.columns)
 print(rain.head().to_string())
@@ -189,9 +188,9 @@ print("y val shape: {}".format(t_valid.shape))
 
 # re-scaling with standardization
 sc = StandardScaler()
-X_train = sc.fit_transform(X_train)
-X_valid = sc.transform(X_valid)
-X_test = sc.transform(X_test)
+X_train = pd.DataFrame(sc.fit_transform(X_train))
+X_valid = pd.DataFrame(sc.fit_transform(X_valid))
+X_test = pd.DataFrame(sc.fit_transform(X_test))
 
 # grid search logistic regression model on the sonar dataset
 from sklearn.linear_model import LogisticRegression
@@ -214,58 +213,61 @@ from sklearn.model_selection import GridSearchCV
 # search = GridSearchCV(model, param_grid, scoring='f1', n_jobs=-1, cv=3, verbose=10, error_score="raise")
 # # execute search
 # best_search = search.fit(X_train, t_train) # X is train samples and t is the corresponding labels
-# #
+#
 # # best score achieved during the GridSearchCV
 # print('GridSearch CV best score : {:.4f}\n\n'.format(search.best_score_))
-# #
+#
 # # print parameters that give the best results
 # print('Parameters that give the best results :','\n\n', (search.best_params_))
-# #
+#
 # # print estimator that was chosen by the GridSearch
 # print('\n\nEstimator that was chosen by the search :','\n\n', (search.best_estimator_))
 
 
-# Best parameter -> c:0.0001 max_iter_:1000 penalty: none solver: sag ||  F1-Score = 0.59
+# Best parameter -> C:1 max_iter_:100 penalty: L2 solver: newton-cg ||  F1-Score = 0.59
 
-##########################################################################
+################################# MODEL TRAIN WITH BEST PARAMETERS #####################################################
 
 
 model = LogisticRegression(C=10, max_iter=5000, penalty='l2', solver='sag')
 model.fit(X_train, t_train)
-#
-t_pred = model.predict(X_valid)
+
 from sklearn.metrics import classification_report
 
+t_pred = model.predict(X_train)
+print(classification_report(t_train, t_pred))
 #
-print(classification_report(t_valid, t_pred))
-#
+t_pred_LR = model.predict(X_valid)
+print(classification_report(t_valid, t_pred_LR))
+
 # Confusion matrix
 from sklearn.metrics import confusion_matrix
 
-cm = confusion_matrix(t_valid, t_pred)
-#
+cm = confusion_matrix(t_valid, t_pred_LR)
+
 print('Confusion matrix\n\n', cm)
-#
+
 print('\nTrue Positives(TP) = ', cm[0, 0])
-#
+
 print('\nTrue Negatives(TN) = ', cm[1, 1])
-#
+
 print('\nFalse Positives(FP) = ', cm[0, 1])
-#
+
 print('\nFalse Negatives(FN) = ', cm[1, 0])
-#
+
 # Visualize
 plt.figure(7, figsize=[18, 16])
 cm_matrix = pd.DataFrame(data=cm, columns=['Actual Positive:1', 'Actual Negative:0'],
                          index=['Predict Positive:1', 'Predict Negative:0'])
-#
+
 sns.heatmap(cm_matrix, annot=True, fmt='d', cmap='YlGnBu')
 plt.show()
 
 # GRID SEARCH NEURAL NETWORKS
-#
+
 from sklearn.neural_network import MLPClassifier
 
+#
 #
 # mlp_gs = MLPClassifier()
 # parameter_space = {
@@ -280,29 +282,36 @@ from sklearn.neural_network import MLPClassifier
 # from sklearn.metrics import classification_report
 # search = GridSearchCV(mlp_gs, parameter_space, n_jobs=-1, cv=3, scoring='f1', verbose=10, error_score="raise")
 # best_search = search.fit(X_train, t_train) # X is train samples and t is the corresponding labels
-#
+# #
 # # best score achieved during the GridSearchCV
 # print('GridSearch CV best score : {:.4f}\n\n'.format(search.best_score_))
-#
+# #
 # # print parameters that give the best results
 # print('Parameters that give the best results :','\n\n', search.best_params_)
-#
+# #
 # # print estimator that was chosen by the GridSearch
 # print('\n\nEstimator that was chosen by the search :','\n\n', search.best_estimator_)
-
-# # Best parameter NN -> alpha = 0.1 , hidden_layer_sizes = (100,100) , early_stopping = false , solver = adam , activation = tanh || F1-Score = 0.6300
 #
-model_NN = MLPClassifier(alpha=0.1, hidden_layer_sizes=(100, 100), early_stopping=False, solver='adam',
+# # # Best parameter NN -> alpha = 0.1 , hidden_layer_sizes = (100,100, 100) , early_stopping = false , solver = adam , activation = tanh || F1-Score = 0.6346
+
+
+################################# MODEL TRAIN WITH BEST PARAMETERS #####################################################
+
+model_NN = MLPClassifier(alpha=0.1, hidden_layer_sizes=(100, 100, 100), early_stopping=False, solver='adam',
                          activation='tanh').fit(X_train, t_train)
+
+t_pred = model_NN.predict(X_train)
+print(classification_report(t_train, t_pred))
 t_pred_NN = model_NN.predict(X_valid)
 print(classification_report(t_valid, t_pred_NN))
 
 # Confusion matrix
-
+#
 from sklearn.metrics import confusion_matrix
 
-cm1 = confusion_matrix(t_valid, t_pred_NN)
 #
+cm1 = confusion_matrix(t_valid, t_pred_NN)
+
 print('Confusion matrix\n\n', cm1)
 
 print('\nTrue Positives(TP) = ', cm1[0, 0])
@@ -321,19 +330,16 @@ cm1_matrix = pd.DataFrame(data=cm1, columns=['Actual Positive:1', 'Actual Negati
 sns.heatmap(cm1_matrix, annot=True, fmt='d', cmap='YlGnBu')
 plt.show()
 
-# BEST MODEL: NN
+# TEST BEST MODEL: NN
 
 # Train best model on valid set + train set and test on test set
-# X_train = pd.DataFrame(X_train, columns = rain.columns != 'RainTomorrow')
-# X_valid = pd.DataFrame(X_valid, columns = rain.columns != 'RainTomorrow')
-# t_train = pd.DataFrame(t_train, columns = rain.RainTomorrow)
-# t_valid = pd.DataFrame(t_valid, columns = rain.RainTomorrow)
 X_train = pd.concat([X_train, X_valid])
 t_train = pd.concat([t_train, t_valid])
 from sklearn.utils import shuffle
-X_train, y_train = shuffle(X_train, t_train)
-best_model = MLPClassifier(alpha=0.1, hidden_layer_sizes=(100, 100), early_stopping=False, solver='adam',
-                         activation='tanh').fit(X_train.to_numpy(), t_train.to_numpy())
+
+X_train, t_train = shuffle(X_train, t_train)
+best_model = MLPClassifier(alpha=0.1, hidden_layer_sizes=(100, 100, 100), early_stopping=False, solver='adam',
+                           activation='tanh').fit(X_train, t_train)
 t_pred_best_model = best_model.predict(X_test)
 print(classification_report(t_test, t_pred_best_model))
 
@@ -342,7 +348,7 @@ print(classification_report(t_test, t_pred_best_model))
 from sklearn.metrics import confusion_matrix
 
 cm_best_model = confusion_matrix(t_test, t_pred_best_model)
-#
+
 print('Confusion matrix\n\n', cm_best_model)
 
 print('\nTrue Positives(TP) = ', cm_best_model[0, 0])
@@ -356,8 +362,7 @@ print('\nFalse Negatives(FN) = ', cm_best_model[1, 0])
 # Visualize
 plt.figure(figsize=[18, 16])
 cm_best_model_matrix = pd.DataFrame(data=cm_best_model, columns=['Actual Positive:1', 'Actual Negative:0'],
-                          index=['Predict Positive:1', 'Predict Negative:0'])
+                                    index=['Predict Positive:1', 'Predict Negative:0'])
 
 sns.heatmap(cm_best_model_matrix, annot=True, fmt='d', cmap='YlGnBu')
 plt.show()
-
