@@ -153,7 +153,6 @@ plt.show()
 # Remove correlated features
 rain.drop(['Temp9am', 'Temp3pm', 'Pressure3pm'], inplace=True, axis=1)
 
-# Remove useless features
 
 print(rain.columns)
 print(rain.head().to_string())
@@ -189,8 +188,8 @@ print("y val shape: {}".format(t_valid.shape))
 # re-scaling with standardization
 sc = StandardScaler()
 X_train = pd.DataFrame(sc.fit_transform(X_train))
-X_valid = pd.DataFrame(sc.fit_transform(X_valid))
-X_test = pd.DataFrame(sc.fit_transform(X_test))
+X_valid = pd.DataFrame(sc.transform(X_valid))
+X_test = pd.DataFrame(sc.transform(X_test))
 
 # grid search logistic regression model on the sonar dataset
 from sklearn.linear_model import LogisticRegression
@@ -292,7 +291,7 @@ from sklearn.neural_network import MLPClassifier
 # # print estimator that was chosen by the GridSearch
 # print('\n\nEstimator that was chosen by the search :','\n\n', search.best_estimator_)
 #
-# # # Best parameter NN -> alpha = 0.1 , hidden_layer_sizes = (100,100, 100) , early_stopping = false , solver = adam , activation = tanh || F1-Score = 0.6346
+# # # Best parameter NN -> alpha = 0.1 , hidden_layer_sizes = (100,100,100) , early_stopping = false , solver = adam , activation = tanh || F1-Score = 0.6346
 
 
 ################################# MODEL TRAIN WITH BEST PARAMETERS #####################################################
@@ -340,6 +339,9 @@ from sklearn.utils import shuffle
 X_train, t_train = shuffle(X_train, t_train)
 best_model = MLPClassifier(alpha=0.1, hidden_layer_sizes=(100, 100, 100), early_stopping=False, solver='adam',
                            activation='tanh').fit(X_train, t_train)
+
+t_pred = best_model.predict(X_train)
+print(classification_report(t_train, t_pred))
 t_pred_best_model = best_model.predict(X_test)
 print(classification_report(t_test, t_pred_best_model))
 
