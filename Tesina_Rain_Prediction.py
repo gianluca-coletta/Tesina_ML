@@ -6,6 +6,33 @@ import seaborn as sns
 # Load weatherAUS dataframe
 rain = pd.read_csv("weatherAUS.csv")
 
+##### Description of variables #####
+# Date
+# Location
+# MinTemp
+# MaxTemp
+# Rainfall: The amount of rainfall recorded for the day in mm
+# Evaporation: The so-called Class A pan evaporation (mm) in the 24 hours to 9am
+# Sunshine: The number of hours of bright sunshine in the day
+# WindGustDir: The direction of the strongest wind gust in the 24 hours to midnight
+# WindGustSpeed
+# WindDir9am
+# WindDir3pm
+# WindSpeed9am
+# WindSpeed3pm
+# Humidity9am
+# Humidity3pm
+# Pressure9am: Atmospheric pressure (hpa) reduced to mean sea level at 9am
+# Pressure3pm
+# Cloud9am: Fraction of sky obscured by cloud at 9am. This is measured in "oktas", which are a unit of eigths. It records how many eigths of the sky are obscured by cloud. A 0 measure indicates completely clear sky whilst an 8 indicates that it is completely overcast.
+# Cloud3pm
+# Temp9am
+# Temp3pm
+# RainToday: Boolean: 1 if precipitation (mm) in the 24 hours to 9am exceeds 1mm, otherwise 0
+# RainTomorrow: Boolean, if tommorrow rain or not
+
+####################################################
+
 # Dimension of dataset
 print("Dataset Rain in Australia dimension:", rain.shape)
 
@@ -158,13 +185,12 @@ print(rain.columns)
 print(rain.head().to_string())
 print(rain.shape)
 
-# Show count of RainToday and RainTomorrow
-print(rain.RainToday.value_counts())
+# Show count of RainTomorrow
 print(rain.RainTomorrow.value_counts())
+print("Percentage of samples with label equal to 1: about 22%")
 
-fig, ax = plt.subplots(1, 2)
-sns.countplot(data=rain, x='RainToday', ax=ax[0])
-sns.countplot(data=rain, x='RainTomorrow', ax=ax[1])
+plt.figure(figsize=[18, 16])
+sns.countplot(data=rain, x='RainTomorrow')
 plt.show()
 
 # Splitting dataset
@@ -200,7 +226,11 @@ from sklearn.model_selection import GridSearchCV
 
 # # define model
 # model = LogisticRegression()
-# # define GridSearch space
+# Type of Hyper-parameter -> penalty: tipo di regolarizzazione (L1 lasso, L2 ridge)
+#                            C: Parametro regolarizzazione
+#                            solver: Algoritmo da usare nel problema di ottimizzazione
+#                            max_iter: Numero massimo di iterazioni per la convergenza
+# Define GridSearch space
 # param_grid = [
 #     {'penalty': ['l2', 'none'],
 #      'C': [1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1, 10, 100],
